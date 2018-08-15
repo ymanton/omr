@@ -154,7 +154,7 @@ uintptr_t setAtomic(volatile uintptr_t *address, uintptr_t value);
  * @return  The old value read from addr
  */
 uint64_t
-J9CAS8Helper(volatile uint64_t *addr, uint32_t compareLo, uint32_t compareHi, uint32_t swapLo, uint32_t swapHi);
+OMRCAS8Helper(volatile uint64_t *addr, uint32_t compareLo, uint32_t compareHi, uint32_t swapLo, uint32_t swapHi);
 
 #endif /* !OMR_ENV_DATA64 && (AIXPPC || LINUXPPC) */
 

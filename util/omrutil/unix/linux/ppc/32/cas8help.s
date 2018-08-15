@@ -53,11 +53,11 @@
  	.set r30,30
  	.set r31,31
 	.section ".rodata"
-	.global J9CAS8Helper
-	.type J9CAS8Helper@function
+	.global OMRCAS8Helper
+	.type OMRCAS8Helper@function
 	.section ".text"
 	.align 2
-J9CAS8Helper:
+OMRCAS8Helper:
 # in:
 #
 # r3 = the address of the 8-aligned memory address

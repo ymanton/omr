@@ -407,7 +407,7 @@ public:
 		}
 #endif /* defined(ATOMIC_ALLOW_PRE_READ) */
 #if defined(OMR_ARCH_POWER) && !defined(OMR_ENV_DATA64) /* defined(ATOMIC_SUPPORT_STUB) */
-		return J9CAS8Helper(address, ((uint32_t*)&oldValue)[1], ((uint32_t*)&oldValue)[0], ((uint32_t*)&newValue)[1], ((uint32_t*)&newValue)[0]);
+		return OMRCAS8Helper(address, ((uint32_t*)&oldValue)[1], ((uint32_t*)&oldValue)[0], ((uint32_t*)&newValue)[1], ((uint32_t*)&newValue)[0]);
 #elif defined(OMRZTPF) /* defined(OMR_ARCH_POWER) && !defined(OMR_ENV_DATA64) */
 		csg((csg_t *)&oldValue, (csg_t *)address, (csg_t)newValue);
 		return oldValue;

@@ -56,18 +56,18 @@
 	.toc
 TOC.static: .tc .static[tc],_static[ro]
 	.csect _static[ro]
- 	.globl .J9CAS8Helper[pr]
-	.globl J9CAS8Helper[ds]
-	.globl .J9CAS8Helper
+	.globl .OMRCAS8Helper[pr]
+	.globl OMRCAS8Helper[ds]
+	.globl .OMRCAS8Helper
 	.toc
-TOC.J9CAS8Helper: .tc .J9CAS8Helper[tc],J9CAS8Helper[ds]
-	.csect J9CAS8Helper[ds]
-	.long .J9CAS8Helper[pr]
+TOC.OMRCAS8Helper: .tc .OMRCAS8Helper[tc],OMRCAS8Helper[ds]
+	.csect OMRCAS8Helper[ds]
+	.long .OMRCAS8Helper[pr]
 	.long  TOC[tc0]
 	.long  0
-	.csect .J9CAS8Helper[pr]
-	.function .J9CAS8Helper[pr],startproc.J9CAS8Helper,16,0,(endproc.J9CAS8Helper-startproc.J9CAS8Helper)
-	startproc.J9CAS8Helper:
+	.csect .OMRCAS8Helper[pr]
+	.function .OMRCAS8Helper[pr],startproc.OMRCAS8Helper,16,0,(endproc.OMRCAS8Helper-startproc.OMRCAS8Helper)
+	startproc.OMRCAS8Helper:
 # in:
 #
 # r3 = the address of the 8-aligned memory address
@@ -99,4 +99,4 @@ fail:
 	.long 0x7d2061ad # stdcx. r9, 0, r12
 	bne loop
 	blr
-	endproc.J9CAS8Helper:
+	endproc.OMRCAS8Helper:
