@@ -53,6 +53,7 @@
  	.set r29,29
  	.set r30,30
  	.set r31,31
+	.set cr0,0
 	.toc
 TOC.static: .tc .static[tc],_static[ro]
 	.csect _static[ro]
@@ -80,23 +81,19 @@ TOC.OMRCAS8Helper: .tc .OMRCAS8Helper[tc],OMRCAS8Helper[ds]
 #
 # r3 = high part of read value
 # r4 = low  part of read value
-	ori r12, r3, 0
-	ori r8, r4, 0
+	.machine "push"
+	.machine "ppc64"
+	rldimi r4, r5, 32, 0
+	rldimi r6, r7, 32, 0
 loop:
-	.long 0x7d2060a8 # ldarx r9, 0, r12
-	.long 0x79230022 # srdi r3, r9, 32
-	ori r4, r9, 0
-	ori r10, r8, 0
-	ori r11, r6, 0
-	.long 0x78aa000e # rldimi r10, r5, 32, 0
-	.long 0x78eb000e # rldimi r11, r7, 32, 0
-	.long 0x7c295040 # cmpl 0, 1, r9, r10
-	bne fail
-	.long 0x7d6061ad # stdcx. r11, 0, r12
-	bne loop
-	blr
+	ldarx r8, 0, r3
+	cmpld cr0, r8, r4
+	bne- fail
+	stdcx. r6, 0, r3
+	bne- loop
 fail:
-	.long 0x7d2061ad # stdcx. r9, 0, r12
-	bne loop
+	mr r4, r8
+	srdi r3, r8, 32
 	blr
+	.machine "pop"
 	endproc.OMRCAS8Helper:

@@ -52,6 +52,7 @@
  	.set r29,29
  	.set r30,30
  	.set r31,31
+	.set cr0,0
 	.section ".rodata"
 	.global OMRCAS8Helper
 	.type OMRCAS8Helper@function
@@ -70,22 +71,15 @@ OMRCAS8Helper:
 #
 # r3 = high part of read value
 # r4 = low  part of read value
-	ori r12, r3, 0
-	ori r8, r4, 0
-loop:
-	ldarx r9, 0, r12
-	srdi r3, r9, 32
-	ori r4, r9, 0
-	ori r10, r8, 0
-	ori r11, r6, 0
-	rldimi r10, r5, 32, 0
-	rldimi r11, r7, 32, 0
-	cmpl cr0, 1, r9, r10
-	bne fail
-	stdcx. r11, 0, r12
-	bne loop
-	blr
-fail:
-	stdcx. r9, 0, r12
-	bne loop
+	rldimi r4, r5, 32, 0
+	rldimi r6, r7, 32, 0
+0:
+	ldarx r8, 0, r3
+	cmpld cr0, r8, r4
+	bne- 1f
+	stdcx. r6, 0, r3
+	bne- 0b
+1:
+	mr r4, r8
+	srdi r3, r8, 32
 	blr
