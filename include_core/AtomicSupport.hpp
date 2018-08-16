@@ -352,8 +352,8 @@ public:
 		}
 #endif /* defined(ATOMIC_ALLOW_PRE_READ) */
 #if defined(OMRZTPF)
-        cs((cs_t *)&oldValue, (cs_t *)address, (cs_t)newValue);
-        return oldValue;
+		cs((cs_t *)&oldValue, (cs_t *)address, (cs_t)newValue);
+		return oldValue;
 #elif defined(__GNUC__) /* defined(OMRZTPF) */ 
 		/* Assume GCC >= 4.2 */
 		return __sync_val_compare_and_swap(address, oldValue, newValue);
@@ -388,7 +388,12 @@ public:
 	 * @return the value at memory location <b>address</b> BEFORE the store was attempted
 	 */
 	VMINLINE static uint64_t
-	lockCompareExchangeU64(volatile uint64_t *address, uint64_t oldValue, uint64_t newValue, bool readBeforeCAS = false)
+	lockCompareExchangeU64(volatile uint64_t *address, uint64_t oldValue, uint64_t newValue,
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+	                       uint32_t &lock,
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+	                       bool readBeforeCAS = false
+                               )
 	{
 #if defined(ATOMIC_SUPPORT_STUB)
 		return 0;
@@ -406,7 +411,22 @@ public:
 			}
 		}
 #endif /* defined(ATOMIC_ALLOW_PRE_READ) */
-#if defined(OMR_ARCH_POWER) && !defined(OMR_ENV_DATA64) /* defined(ATOMIC_SUPPORT_STUB) */
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+		{
+			uint64_t currentValue;
+			while (lockCompareExchangeU32(&lock, 0, 1) != 0) {}
+#if defined(__xlC__)
+			readBarrier();
+#endif /* defined(__xlC__) */
+			currentValue = *address;
+			if (currentValue == oldValue) {
+				*address = newValue;
+			}
+			writeBarrier();
+			lock = 0;
+			return currentValue;
+		}
+#elif defined(OMR_ARCH_POWER) && !defined(OMR_ENV_DATA64) /* !defined(OMR_ENV_64BIT_CAPABLE) */
 		return OMRCAS8Helper(address, ((uint32_t*)&oldValue)[1], ((uint32_t*)&oldValue)[0], ((uint32_t*)&newValue)[1], ((uint32_t*)&newValue)[0]);
 #elif defined(OMRZTPF) /* defined(OMR_ARCH_POWER) && !defined(OMR_ENV_DATA64) */
 		csg((csg_t *)&oldValue, (csg_t *)address, (csg_t)newValue);
@@ -591,14 +611,22 @@ public:
 	 * @return The value at memory location <b>address</b>
 	 */
 	VMINLINE static uint64_t
-	addU64(volatile uint64_t *address, uint64_t addend)
+	addU64(volatile uint64_t *address, uint64_t addend
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+	                   , uint32_t &lock
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+              )
 	{
 		/* Stop compiler optimizing away load of oldValue */
 		volatile uint64_t *localAddr = address;
 		uint64_t oldValue;
 
 		oldValue = (uint64_t)*localAddr;
-		while ((lockCompareExchangeU64(localAddr, oldValue, oldValue + addend)) != oldValue) {
+		while ((lockCompareExchangeU64(localAddr, oldValue, oldValue + addend
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+                                               , lock
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+                                              )) != oldValue) {
 			oldValue = (uint64_t)*localAddr;
 		}
 		return oldValue + addend;
@@ -615,7 +643,11 @@ public:
 	 * @return The value at memory location <b>address</b>
 	 */
 	VMINLINE static double
-	addDouble(volatile double *address, double addend)
+	addDouble(volatile double *address, double addend
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+	         , uint32_t &lock
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+                 )
 	{
 		/* double is stored as 64bit */
 		/* Stop compiler optimizing away load of oldValue */
@@ -624,7 +656,11 @@ public:
 		double oldValue = *address;
 		double newValue =  oldValue + addend;
 
-		while (lockCompareExchangeU64(localAddr, *(uint64_t *)&oldValue, *(uint64_t *)&newValue) != *(uint64_t *)&oldValue) {
+		while (lockCompareExchangeU64(localAddr, *(uint64_t *)&oldValue, *(uint64_t *)&newValue
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+		                              , lock
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+                                             ) != *(uint64_t *)&oldValue) {
 			oldValue = *address;
 			newValue =  oldValue + addend;
 		}
@@ -666,14 +702,22 @@ public:
 	 * @return The value at memory location <b>address</b>
 	 */
 	VMINLINE static uint64_t
-	subtractU64(volatile uint64_t *address, uint64_t value)
+	subtractU64(volatile uint64_t *address, uint64_t value
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+	            , uint32_t &lock
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+                   )
 	{
 		/* Stop compiler optimizing away load of oldValue */
 		volatile uint64_t *localAddr = address;
 		uint64_t oldValue;
 
 		oldValue = (uint64_t)*localAddr;
-		while ((lockCompareExchangeU64(localAddr, oldValue, oldValue - value)) != oldValue) {
+		while ((lockCompareExchangeU64(localAddr, oldValue, oldValue - value
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+		                               , lock
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+                                              )) != oldValue) {
 			oldValue = (uint64_t)*localAddr;
 		}
 		return oldValue - value;
@@ -740,14 +784,22 @@ public:
 	 * @note This method can spin indefinitely while attempting to write the new value.
 	 */
 	VMINLINE static uint64_t
-	setU64(volatile uint64_t *address, uint64_t value)
+	setU64(volatile uint64_t *address, uint64_t value
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+	       , uint32_t &lock
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+               )
 	{
 		/* Stop compiler optimizing away load of oldValue */
 		volatile uint64_t *localAddr = address;
 		uint64_t oldValue;
 
 		oldValue = (uint64_t)*localAddr;
-		while ((lockCompareExchangeU64(localAddr, oldValue, value)) != oldValue) {
+		while ((lockCompareExchangeU64(localAddr, oldValue, value
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+		                               , lock
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+		                              )) != oldValue) {
 			oldValue = (uint64_t)*localAddr;
 		}
 		return oldValue;
@@ -762,13 +814,21 @@ public:
 	 * @return the value stored at the address.
 	 */
 	VMINLINE static uint64_t
-	getU64(volatile uint64_t *address)
+	getU64(volatile uint64_t *address
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+	       , uint32_t &lock
+#endif
+               )
 	{
 		uint64_t value = *address;
 
 #if !defined(OMR_ENV_DATA64)
 		/* this is necessary to ensure atomic read of 64-bit value on 32/31-bit platforms */
-		value = lockCompareExchangeU64(address, value, value);
+		value = lockCompareExchangeU64(address, value, value
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+		                               , lock
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+                                              );
 #endif /* !defined(OMR_ENV_DATA64) */
 
 		return value;

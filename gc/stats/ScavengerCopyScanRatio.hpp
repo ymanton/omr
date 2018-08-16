@@ -115,6 +115,9 @@ private:
 	volatile uint64_t _accumulatingSamples;		/**< accumulator for aggregating per thread wait/copy/s`wait/copy/scanes-- these are periodically latched into _accumulatedSamples and reset */
 	volatile uint64_t _accumulatedSamples;		/**< most recent aggregate wait/copy/scan counts from SCAVENGER_THREAD_UPDATES_PER_MAJOR_UPDATE samples  */
 	volatile uintptr_t _majorUpdateThreadEnv;	/**< a token for the thread that has claimed a major update and owns the critical region wherein the update is effected */
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+        uint32_t _atomicLockWord;
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
 	uintptr_t _scalingUpdateCount;				/**< the number of times _accumulatingSamples was latched into _accumulatedSamples */
 	uintptr_t _overflowCount;					/**< the number of times _accumulatingSamples overflowed one or more counters */
 	uint64_t _resetTimestamp;					/**< timestamp at reset() */
@@ -134,6 +137,9 @@ public:
 		_accumulatingSamples(0)
 		,_accumulatedSamples(SCAVENGER_COUNTER_DEFAULT_ACCUMULATOR)
 		,_majorUpdateThreadEnv(0)
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+                ,_atomicLockWord(0)
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
 		,_scalingUpdateCount(0)
 		,_overflowCount(0)
 		,_resetTimestamp(0)
@@ -152,7 +158,11 @@ public:
 	MMINLINE double
 	getScalingFactor(MM_EnvironmentBase* env)
 	{
-		uint64_t accumulatedSamples = MM_AtomicOperations::getU64(&_accumulatedSamples);
+		uint64_t accumulatedSamples = MM_AtomicOperations::getU64(&_accumulatedSamples
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+		                                                          , _atomicLockWord
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+                                                                         );
 		return getScalingFactor(env, _threadCount, waits(accumulatedSamples), copied(accumulatedSamples), scanned(accumulatedSamples), updates(accumulatedSamples));
 	}
 
@@ -232,7 +242,11 @@ public:
 	majorUpdate(MM_EnvironmentBase* env, uint64_t updateResult, uintptr_t nonEmptyScanLists, uintptr_t cachesQueued) {
 		if (0 == (SCAVENGER_COUNTER_OVERFLOW & updateResult)) {
 			/* no overflow so latch updateResult into _accumulatedSamples and record the update */
-			MM_AtomicOperations::setU64(&_accumulatedSamples, updateResult);
+			MM_AtomicOperations::setU64(&_accumulatedSamples, updateResult
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+		                                    , _atomicLockWord
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+                                                   );
 			_scalingUpdateCount += 1;
 			_threadCount = record(env, nonEmptyScanLists, cachesQueued);
 		} else {
@@ -363,11 +377,19 @@ private:
 		/* Stop compiler optimizing away load of oldValue */
 		volatile uint64_t *localAddr = &_accumulatingSamples;
 		uint64_t oldValue = *localAddr;
-		if (oldValue == MM_AtomicOperations::lockCompareExchangeU64(localAddr, oldValue, oldValue + threadUpdate)) {
+		if (oldValue == MM_AtomicOperations::lockCompareExchangeU64(localAddr, oldValue, oldValue + threadUpdate
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+		                                                            , _atomicLockWord
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+                                                                           )) {
 			newValue = oldValue + threadUpdate;
 			uint64_t updateCount = updates(newValue);
 			if (SCAVENGER_THREAD_UPDATES_PER_MAJOR_UPDATE <= updateCount) {
-				MM_AtomicOperations::setU64(&_accumulatingSamples, 0);
+				MM_AtomicOperations::setU64(&_accumulatingSamples, 0
+#if !defined(OMR_ENV_64BIT_CAPABLE)
+		                                            , _atomicLockWord
+#endif /* !defined(OMR_ENV_64BIT_CAPABLE) */
+                                                           );
 				if (SCAVENGER_THREAD_UPDATES_PER_MAJOR_UPDATE < updateCount) {
 					newValue = 0;
 				}
