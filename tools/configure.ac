@@ -50,9 +50,11 @@ then
 
 	AC_CHECK_SIZEOF([void *])
 	AC_MSG_CHECKING([OMR_BUILD_DATASIZE])
-	AS_IF([test "$ac_cv_sizeof_void_p" = 8],
-		[OMR_BUILD_DATASIZE=64],
-		[OMR_BUILD_DATASIZE=32])
+	AS_IF([test -z $OMR_BUILD_DATASIZE],
+		[AS_IF([test "$ac_cv_sizeof_void_p" = 8],
+			[OMR_BUILD_DATASIZE=64],
+			[OMR_BUILD_DATASIZE=32])],
+		[])
 	AC_MSG_RESULT([$OMR_BUILD_DATASIZE])
 
 
