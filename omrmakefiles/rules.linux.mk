@@ -243,11 +243,9 @@ else
 endif
 
 ifneq (,$(findstring executable,$(ARTIFACT_TYPE)))
-  ifeq (x86,$(OMR_HOST_ARCH))
-    ifeq (1,$(OMR_ENV_DATA64))
-    else
-      GLOBAL_LDFLAGS+=-m32
-    endif
+  ifeq (1,$(OMR_ENV_DATA64))
+  else
+    GLOBAL_LDFLAGS+=-m32
   endif
 
   ## Default Libraries
