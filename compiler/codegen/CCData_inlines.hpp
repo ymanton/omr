@@ -48,7 +48,6 @@ bool CCData::put(const T value, const key_t * const key, index_t &index)
 //#endif
    return put(&value, sizeof(value), alignof(value), key, index);
    }
-   }
 
 template <typename T>
 bool CCData::get(const index_t index, T &value) const
