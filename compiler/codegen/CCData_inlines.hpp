@@ -65,7 +65,9 @@ T* CCData::get(const index_t index) const
    if (index >= _capacity)
       return NULL;
 
-   return reinterpret_cast<T *>(_data + index);
+   const size_t byteIndex = byteIndexFromDataIndex(index);
+
+   return reinterpret_cast<T *>(_data + byteIndex);
    }
 
 }
