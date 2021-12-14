@@ -489,7 +489,7 @@ static uint64_t getPhysicalMemory();
 #endif /* defined(OMRZTPF) */
 
 #if defined(LINUX) && !defined(OMRZTPF)
-static BOOLEAN isCgroupV1Available(struct OMRPortLibrary *portLibrary);
+static BOOLEAN isCgroupAvailable(struct OMRPortLibrary *portLibrary, int32_t *cgroupVersion);
 static void freeCgroupEntries(struct OMRPortLibrary *portLibrary, OMRCgroupEntry *cgEntryList);
 static char * getCgroupNameForSubsystem(struct OMRPortLibrary *portLibrary, OMRCgroupEntry *cgEntryList, const char *subsystem);
 static int32_t addCgroupEntry(struct OMRPortLibrary *portLibrary, OMRCgroupEntry **cgEntryList, int32_t hierId, const char *subsystem, const char *cgroupName, uint64_t flag);
@@ -5368,27 +5368,37 @@ omrsysinfo_os_kernel_info(struct OMRPortLibrary *portLibrary, struct OMROSKernel
 
 /**
  * @internal
- * Checks if cgroup v1 system is available
+ * Checks if cgroup v1 or v2 system is available
  *
  * @param[in] portLibrary pointer to OMRPortLibrary
+ * @param[out] cgroupVersion optional pointer to cgroup version, on successful return contains the cgroup version number.
  *
- * @return TRUE if cgroup v1 system is available, FALSE otherwise
+ * @return TRUE if cgroup v1 or v2 system is available, FALSE otherwise
  */
 static BOOLEAN
-isCgroupV1Available(struct OMRPortLibrary *portLibrary)
+isCgroupAvailable(struct OMRPortLibrary *portLibrary, int32_t *cgroupVersion)
 {
 	struct statfs buf = {0};
 	int32_t rc = 0;
 	BOOLEAN result = TRUE;
 
-	/* If tmpfs is mounted on /sys/fs/cgroup, then it indicates cgroup v1 system is available */
+	/* If tmpfs is mounted on /sys/fs/cgroup, then it indicates cgroup v1 system is available.
+	 * If cgroup2 is mounted, we have cgroup v2 available. */
 	rc = statfs(OMR_CGROUP_DEFAULT_MOUNT_POINT, &buf);
 	if (0 != rc) {
 		int32_t osErrCode = errno;
 		Trc_PRT_isCgroupV1Available_statfs_failed(OMR_CGROUP_DEFAULT_MOUNT_POINT, osErrCode);
 		portLibrary->error_set_last_error(portLibrary, osErrCode, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_STATFS_FAILED);
 		result = FALSE;
-	} else if (TMPFS_MAGIC != buf.f_type) {
+	} else if (TMPFS_MAGIC == buf.f_type) {
+		if (NULL != cgroupVersion) {
+			*cgroupVersion = 1;
+		}
+	} else if (CGROUP2_SUPER_MAGIC == buf.f_type) {
+		if (NULL != cgroupVersion) {
+			*cgroupVersion = 2;
+		}
+	} else {
 		Trc_PRT_isCgroupV1Available_tmpfs_not_mounted(OMR_CGROUP_DEFAULT_MOUNT_POINT);
 		portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_TMPFS_NOT_MOUNTED, "tmpfs is not mounted on " OMR_CGROUP_DEFAULT_MOUNT_POINT);
 		result = FALSE;
@@ -5865,7 +5875,7 @@ isRunningInContainer(struct OMRPortLibrary *portLibrary, BOOLEAN *inContainer)
 	/* Assume we are not in container */
 	*inContainer = FALSE;
 
-	if (isCgroupV1Available(portLibrary)) {
+	if (isCgroupAvailable(portLibrary, NULL)) {
 		/* Read PID 1's cgroup file /proc/1/cgroup and check cgroup name for each subsystem.
 		 * If cgroup name for each subsystem points to the root cgroup "/",
 		 * then the process is not running in a container.
@@ -5973,7 +5983,7 @@ omrsysinfo_cgroup_is_system_available(struct OMRPortLibrary *portLibrary)
 
 	Trc_PRT_sysinfo_cgroup_is_system_available_Entry();
 	if (NULL == PPG_cgroupEntryList) {
-		if (isCgroupV1Available(portLibrary)) {
+		if (isCgroupAvailable(portLibrary, NULL)) {
 			BOOLEAN inContainer = FALSE;
 
 			rc = isRunningInContainer(portLibrary, &inContainer);
