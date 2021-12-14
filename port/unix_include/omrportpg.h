@@ -84,7 +84,7 @@ typedef struct OMRPortPlatformGlobals {
 	char *si_osVersion;
 	uintptr_t vmem_pageSize[OMRPORT_VMEM_PAGESIZE_COUNT]; /** <0 terminated array of supported page sizes */
 	uintptr_t vmem_pageFlags[OMRPORT_VMEM_PAGESIZE_COUNT]; /** <0 terminated array of flags describing type of the supported page sizes */
-	BOOLEAN isRunningInContainer;	
+	BOOLEAN isRunningInContainer;
 #if defined(LINUX) && defined(S390)
 	int64_t last_clock_delta_update;  /** hw clock microsecond timestamp of last clock delta adjustment */
 	int64_t software_msec_clock_delta; /** signed difference between hw and sw clocks in milliseconds */
@@ -105,6 +105,7 @@ typedef struct OMRPortPlatformGlobals {
 	uint64_t cgroupSubsystemsAvailable; /**< cgroup subsystems available for port library to use; it is valid only when cgroupEntryList is non-null */
 	uint64_t cgroupSubsystemsEnabled; /**< cgroup subsystems enabled in port library; it is valid only when cgroupEntryList is non-null */
 	OMRCgroupEntry *cgroupEntryList; /**< head of the circular linked list, each element contains information about cgroup of the process for a subsystem */
+	int32_t cgroupVersion; /**< cgroup version number found at the cgroup mount point */
 	uintptr_t performFullMemorySearch; /**< Always perform full range memory search even smart address can not be established */
 	BOOLEAN syscallNotAllowed; /**< Assigned True if the mempolicy syscall is failed due to security opts (Can be seen in case of docker) */
 #endif /* defined(LINUX) */
@@ -157,6 +158,7 @@ typedef struct OMRPortPlatformGlobals {
 #define PPG_cgroupSubsystemsAvailable (portLibrary->portGlobals->platformGlobals.cgroupSubsystemsAvailable)
 #define PPG_cgroupSubsystemsEnabled (portLibrary->portGlobals->platformGlobals.cgroupSubsystemsEnabled)
 #define PPG_cgroupEntryList (portLibrary->portGlobals->platformGlobals.cgroupEntryList)
+#define PPG_cgroupVersion (portLibrary->portGlobals->platformGlobals.cgroupVersion)
 #define PPG_numaSyscallNotAllowed (portLibrary->portGlobals->platformGlobals.syscallNotAllowed)
 #define PPG_performFullMemorySearch (portLibrary->portGlobals->platformGlobals.performFullMemorySearch)
 #define PPG_huge_pages_mmap_enabled (portLibrary->portGlobals->platformGlobals.huge_pages_mmap_enabled)
@@ -173,4 +175,3 @@ typedef struct OMRPortPlatformGlobals {
 #endif
 
 #endif /* omrportpg_h */
-

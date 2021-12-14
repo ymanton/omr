@@ -3542,6 +3542,7 @@ omrsysinfo_startup(struct OMRPortLibrary *portLibrary)
 
 #if defined(LINUX) && !defined(OMRZTPF)
 	PPG_cgroupEntryList = NULL;
+	PPG_cgroupVersion = -1;
 	/* To handle the case where multiple port libraries are started and shutdown,
 	 * as done by some fvtests (eg fvtest/porttest/j9portTest.cpp) that create fake portlibrary
 	 * to test its management and lifecycle,
@@ -5983,7 +5984,7 @@ omrsysinfo_cgroup_is_system_available(struct OMRPortLibrary *portLibrary)
 
 	Trc_PRT_sysinfo_cgroup_is_system_available_Entry();
 	if (NULL == PPG_cgroupEntryList) {
-		if (isCgroupAvailable(portLibrary, NULL)) {
+		if (isCgroupAvailable(portLibrary, &PPG_cgroupVersion)) {
 			BOOLEAN inContainer = FALSE;
 
 			rc = isRunningInContainer(portLibrary, &inContainer);
