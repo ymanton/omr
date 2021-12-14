@@ -358,8 +358,8 @@ struct {
  * An example:
  *  7:cpuacct,cpu:/mycgroup
  */
-#define PROC_PID_CGROUP_ENTRY_FORMAT "%d:%[^:]:%s"
-#define PROC_PID_CGROUP_SYSTEMD_ENTRY_FORMAT "%d::%s"
+#define PROC_PID_CGROUPV1_ENTRY_FORMAT "%d:%[^:]:%s"
+#define PROC_PID_CGROUPV2_ENTRY_FORMAT "%d::%s"
 
 #define SINGLE_CGROUP_METRIC 1
 
@@ -5559,12 +5559,12 @@ readCgroupFile(struct OMRPortLibrary *portLibrary, int pid, BOOLEAN inContainer,
 			rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_PROCESS_CGROUP_FILE_READ_FAILED, "fgets failed to read %s file stream with errno=%d", cgroupFilePath, osErrCode);
 			goto _end;
 		}
-		rc = sscanf(buffer, PROC_PID_CGROUP_ENTRY_FORMAT, &hierId, subsystems, cgroup);
+		rc = sscanf(buffer, PROC_PID_CGROUPV1_ENTRY_FORMAT, &hierId, subsystems, cgroup);
 
 		if (EOF == rc) {
 			break;
 		} else if (1 == rc) {
-			rc = sscanf(buffer, PROC_PID_CGROUP_SYSTEMD_ENTRY_FORMAT, &hierId, cgroup);
+			rc = sscanf(buffer, PROC_PID_CGROUPV2_ENTRY_FORMAT, &hierId, cgroup);
 
 			if (2 != rc) {
 				Trc_PRT_readCgroupFile_unexpected_format(cgroupFilePath);
@@ -5895,12 +5895,12 @@ isRunningInContainer(struct OMRPortLibrary *portLibrary, BOOLEAN *inContainer)
 				rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_PROCESS_CGROUP_FILE_READ_FAILED, "fgets failed to read %s file stream with errno=%d", OMR_PROC_PID_ONE_CGROUP_FILE, osErrCode);
 				goto _end;
 			}
-			rc = sscanf(buffer, PROC_PID_CGROUP_ENTRY_FORMAT, &hierId, subsystems, cgroup);
+			rc = sscanf(buffer, PROC_PID_CGROUPV1_ENTRY_FORMAT, &hierId, subsystems, cgroup);
 
 			if (EOF == rc) {
 				break;
 			} else if (1 == rc) {
-				rc = sscanf(buffer, PROC_PID_CGROUP_SYSTEMD_ENTRY_FORMAT, &hierId, cgroup);
+				rc = sscanf(buffer, PROC_PID_CGROUPV2_ENTRY_FORMAT, &hierId, cgroup);
 
 				if (2 != rc) {
 					Trc_PRT_isRunningInContainer_unexpected_format(OMR_PROC_PID_ONE_CGROUP_FILE);
