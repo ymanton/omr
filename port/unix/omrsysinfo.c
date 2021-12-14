@@ -345,7 +345,7 @@ struct {
 
 #if defined(LINUX)
 
-#define OMR_CGROUP_V1_MOUNT_POINT "/sys/fs/cgroup"
+#define OMR_CGROUP_DEFAULT_MOUNT_POINT "/sys/fs/cgroup"
 #define ROOT_CGROUP "/"
 #define SYSTEMD_INIT_CGROUP "/init.scope"
 #define OMR_PROC_PID_ONE_CGROUP_FILE "/proc/1/cgroup"
@@ -722,7 +722,7 @@ omrsysinfo_get_processor_feature_name(struct OMRPortLibrary *portLibrary, uint32
 
 
 /**
- * Generate the corresponding string literals for the provided OMRProcessorDesc. The buffer will be zero 
+ * Generate the corresponding string literals for the provided OMRProcessorDesc. The buffer will be zero
  * initialized and overwritten with the processor feature output string.
  *
  * @param[in] portLibrary The port library.
@@ -1780,7 +1780,7 @@ omrsysinfo_get_aarch64_processor_feature_name(uint32_t feature)
 	case OMR_FEATURE_ARM64_FLAGM2:
 		return "flagm2";
 	case OMR_FEATURE_ARM64_FRINTTS:
-		return "frint";	
+		return "frint";
 	case OMR_FEATURE_ARM64_SVE_I8MM:
 		return "svei8mm";
 	case OMR_FEATURE_ARM64_F32MM:
@@ -5382,15 +5382,15 @@ isCgroupV1Available(struct OMRPortLibrary *portLibrary)
 	BOOLEAN result = TRUE;
 
 	/* If tmpfs is mounted on /sys/fs/cgroup, then it indicates cgroup v1 system is available */
-	rc = statfs(OMR_CGROUP_V1_MOUNT_POINT, &buf);
+	rc = statfs(OMR_CGROUP_DEFAULT_MOUNT_POINT, &buf);
 	if (0 != rc) {
 		int32_t osErrCode = errno;
-		Trc_PRT_isCgroupV1Available_statfs_failed(OMR_CGROUP_V1_MOUNT_POINT, osErrCode);
+		Trc_PRT_isCgroupV1Available_statfs_failed(OMR_CGROUP_DEFAULT_MOUNT_POINT, osErrCode);
 		portLibrary->error_set_last_error(portLibrary, osErrCode, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_STATFS_FAILED);
 		result = FALSE;
 	} else if (TMPFS_MAGIC != buf.f_type) {
-		Trc_PRT_isCgroupV1Available_tmpfs_not_mounted(OMR_CGROUP_V1_MOUNT_POINT);
-		portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_TMPFS_NOT_MOUNTED, "tmpfs is not mounted on " OMR_CGROUP_V1_MOUNT_POINT);
+		Trc_PRT_isCgroupV1Available_tmpfs_not_mounted(OMR_CGROUP_DEFAULT_MOUNT_POINT);
+		portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_TMPFS_NOT_MOUNTED, "tmpfs is not mounted on " OMR_CGROUP_DEFAULT_MOUNT_POINT);
 		result = FALSE;
 	}
 
@@ -5689,14 +5689,14 @@ getAbsolutePathOfCgroupSubsystemFile(struct OMRPortLibrary *portLibrary, uint64_
 	}
 
 	/* absolute path of the file to be read is: /sys/fs/cgroup/subsystemNames[subsystem]/cgroup/filenName */
-	fullPathLen = portLibrary->str_printf(portLibrary, NULL, (uint32_t)-1, "%s/%s/%s/%s", OMR_CGROUP_V1_MOUNT_POINT, subsystemNames[subsystem], cgroup, fileName);
+	fullPathLen = portLibrary->str_printf(portLibrary, NULL, (uint32_t)-1, "%s/%s/%s/%s", OMR_CGROUP_DEFAULT_MOUNT_POINT, subsystemNames[subsystem], cgroup, fileName);
 	if (fullPathLen > *bufferLength) {
 		*bufferLength = fullPathLen;
 		rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_STRING_BUFFER_TOO_SMALL, "buffer size should be %d bytes", fullPathLen);
 		goto _end;
 	}
 
-	portLibrary->str_printf(portLibrary, fullPath, fullPathLen, "%s/%s/%s/%s", OMR_CGROUP_V1_MOUNT_POINT, subsystemNames[subsystem], cgroup, fileName);
+	portLibrary->str_printf(portLibrary, fullPath, fullPathLen, "%s/%s/%s/%s", OMR_CGROUP_DEFAULT_MOUNT_POINT, subsystemNames[subsystem], cgroup, fileName);
 
 _end:
 	return rc;
