@@ -163,6 +163,11 @@ typedef struct OMRPortPlatformGlobals {
 #define PPG_performFullMemorySearch (portLibrary->portGlobals->platformGlobals.performFullMemorySearch)
 #define PPG_huge_pages_mmap_enabled (portLibrary->portGlobals->platformGlobals.huge_pages_mmap_enabled)
 #define PPG_memfd_function (portLibrary->portGlobals->platformGlobals.memfd_function)
+
+#define OMR_CGROUP_VERSION_UNDEFINED -1
+#define OMR_CGROUP_VERSION_UNKNOWN 0
+#define OMR_CGROUP_VERSION_V1 1
+#define OMR_CGROUP_VERSION_V2 2
 #endif /* defined(LINUX) */
 
 #define PPG_stfleCache (portLibrary->portGlobals->platformGlobals.stfleCache)

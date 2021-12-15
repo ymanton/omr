@@ -3542,7 +3542,7 @@ omrsysinfo_startup(struct OMRPortLibrary *portLibrary)
 
 #if defined(LINUX) && !defined(OMRZTPF)
 	PPG_cgroupEntryList = NULL;
-	PPG_cgroupVersion = -1;
+	PPG_cgroupVersion = OMR_CGROUP_VERSION_UNDEFINED;
 	/* To handle the case where multiple port libraries are started and shutdown,
 	 * as done by some fvtests (eg fvtest/porttest/j9portTest.cpp) that create fake portlibrary
 	 * to test its management and lifecycle,
@@ -5393,13 +5393,16 @@ isCgroupAvailable(struct OMRPortLibrary *portLibrary, int32_t *cgroupVersion)
 		result = FALSE;
 	} else if (TMPFS_MAGIC == buf.f_type) {
 		if (NULL != cgroupVersion) {
-			*cgroupVersion = 1;
+			*cgroupVersion = OMR_CGROUP_VERSION_V1;
 		}
 	} else if (CGROUP2_SUPER_MAGIC == buf.f_type) {
 		if (NULL != cgroupVersion) {
-			*cgroupVersion = 2;
+			*cgroupVersion = OMR_CGROUP_VERSION_V2;
 		}
 	} else {
+		if (NULL != cgroupVersion) {
+			*cgroupVersion = OMR_CGROUP_VERSION_UNKNOWN;
+		}
 		Trc_PRT_isCgroupV1Available_tmpfs_not_mounted(OMR_CGROUP_DEFAULT_MOUNT_POINT);
 		portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_TMPFS_NOT_MOUNTED, "tmpfs is not mounted on " OMR_CGROUP_DEFAULT_MOUNT_POINT);
 		result = FALSE;
