@@ -5404,7 +5404,7 @@ isCgroupAvailable(struct OMRPortLibrary *portLibrary, int32_t *cgroupVersion)
 			*cgroupVersion = OMR_CGROUP_VERSION_UNKNOWN;
 		}
 		Trc_PRT_isCgroupAvailable_fs_not_mounted(OMR_CGROUP_DEFAULT_MOUNT_POINT);
-		portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_TMPFS_NOT_MOUNTED, "tmpfs is not mounted on " OMR_CGROUP_DEFAULT_MOUNT_POINT);
+		portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_KNOWN_FS_NOT_MOUNTED, "known filesystem is not mounted on " OMR_CGROUP_DEFAULT_MOUNT_POINT);
 		result = FALSE;
 	}
 
