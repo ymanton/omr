@@ -5388,7 +5388,7 @@ isCgroupAvailable(struct OMRPortLibrary *portLibrary, int32_t *cgroupVersion)
 	rc = statfs(OMR_CGROUP_DEFAULT_MOUNT_POINT, &buf);
 	if (0 != rc) {
 		int32_t osErrCode = errno;
-		Trc_PRT_isCgroupV1Available_statfs_failed(OMR_CGROUP_DEFAULT_MOUNT_POINT, osErrCode);
+		Trc_PRT_isCgroupAvailable_statfs_failed(OMR_CGROUP_DEFAULT_MOUNT_POINT, osErrCode);
 		portLibrary->error_set_last_error(portLibrary, osErrCode, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_STATFS_FAILED);
 		result = FALSE;
 	} else if (TMPFS_MAGIC == buf.f_type) {
@@ -5403,7 +5403,7 @@ isCgroupAvailable(struct OMRPortLibrary *portLibrary, int32_t *cgroupVersion)
 		if (NULL != cgroupVersion) {
 			*cgroupVersion = OMR_CGROUP_VERSION_UNKNOWN;
 		}
-		Trc_PRT_isCgroupV1Available_tmpfs_not_mounted(OMR_CGROUP_DEFAULT_MOUNT_POINT);
+		Trc_PRT_isCgroupAvailable_fs_not_mounted(OMR_CGROUP_DEFAULT_MOUNT_POINT);
 		portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_TMPFS_NOT_MOUNTED, "tmpfs is not mounted on " OMR_CGROUP_DEFAULT_MOUNT_POINT);
 		result = FALSE;
 	}

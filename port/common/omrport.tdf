@@ -1014,8 +1014,8 @@ TraceExit=Trc_PRT_sysinfo_get_os_description_Exit Group=sysinfo Overhead=1 Level
 TraceEntry=Trc_PRT_sysinfo_os_has_feature_Entered Group=sysinfo Overhead=1 Level=5 NoEnv Template="sysinfo_os_has_feature: desc = %p, feature = %d"
 TraceExit=Trc_PRT_sysinfo_os_has_feature_Exit Group=sysinfo Overhead=1 Level=5 NoEnv Template="sysinfo_os_has_feature: returning with %zu."
 
-TraceException=Trc_PRT_isCgroupV1Available_statfs_failed Group=sysinfo Overhead=1 Level=1 NoEnv Template="isCgroupV1Available: statfs on %s failed with errno=%d"
-TraceException=Trc_PRT_isCgroupV1Available_tmpfs_not_mounted Group=sysinfo Overhead=1 Level=1 NoEnv Template="isCgroupV1Available: tmpfs is not mounted on %s"
+TraceException=Trc_PRT_isCgroupAvailable_statfs_failed Group=sysinfo Overhead=1 Level=1 NoEnv Template="isCgroupAvailable: statfs on %s failed with errno=%d"
+TraceException=Trc_PRT_isCgroupAvailable_fs_not_mounted Group=sysinfo Overhead=1 Level=1 NoEnv Template="isCgroupAvailable: known filesystem is not mounted on %s"
 
 TraceException=Trc_PRT_addCgroupEntry_oom_for_cgroup_entry Group=sysinfo Overhead=1 Level=1 NoEnv Template="addCgroupEntry: failed to allocate memory for OMRCgroupEntry"
 TraceEvent=Trc_PRT_addCgroupEntry_added_new_entry Group=sysinfo Overhead=1 Level=3 NoEnv Template="addCgroupEntry: added new cgroup entry for subsystem %s and cgroup %s"
