@@ -5580,7 +5580,7 @@ readCgroupFile(struct OMRPortLibrary *portLibrary, int pid, BOOLEAN inContainer,
 		} else if (1 == rc) {
 			rc = sscanf(buffer, PROC_PID_CGROUPV2_ENTRY_FORMAT, &hierId, cgroup);
 
-			if (2 != rc) {
+			if (2 != rc || 0 != hierId) {
 				Trc_PRT_readCgroupFile_unexpected_format(cgroupFilePath);
 				rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_PROCESS_CGROUP_FILE_READ_FAILED, "unexpected format of %s", cgroupFilePath);
 				goto _end;
@@ -5916,7 +5916,7 @@ isRunningInContainer(struct OMRPortLibrary *portLibrary, BOOLEAN *inContainer)
 			} else if (1 == rc) {
 				rc = sscanf(buffer, PROC_PID_CGROUPV2_ENTRY_FORMAT, &hierId, cgroup);
 
-				if (2 != rc) {
+				if (2 != rc || 0 != hierId) {
 					Trc_PRT_isRunningInContainer_unexpected_format(OMR_PROC_PID_ONE_CGROUP_FILE);
 					rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_PROCESS_CGROUP_FILE_READ_FAILED, "unexpected format of %s file", OMR_PROC_PID_ONE_CGROUP_FILE);
 					goto _end;
