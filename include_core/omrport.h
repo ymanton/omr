@@ -1308,6 +1308,7 @@ typedef struct OMROSKernelInfo {
 } OMROSKernelInfo;
 
 /* bitwise flags indicating cgroup subsystems supported by portlibrary */
+#define OMR_CGROUP_SUBSYSTEM_NONE ((uint64_t)0x0)
 #define OMR_CGROUP_SUBSYSTEM_CPU ((uint64_t)0x1)
 #define OMR_CGROUP_SUBSYSTEM_MEMORY ((uint64_t)0x2)
 #define OMR_CGROUP_SUBSYSTEM_CPUSET ((uint64_t)0x4)
@@ -1569,7 +1570,7 @@ typedef struct OMRProcessorDesc {
 
 /* z15 facilities */
 
-/* STFLE bit 61 - Miscellaneous-instruction-extensions facility 3 */ 
+/* STFLE bit 61 - Miscellaneous-instruction-extensions facility 3 */
 #define OMR_FEATURE_S390_MISCELLANEOUS_INSTRUCTION_EXTENSION_3 61
 
 /* STFLE bit 148 - Vector enhancements facility 2 */

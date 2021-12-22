@@ -3007,14 +3007,23 @@ _cleanup:
 	return rc;
 }
 
-#define CGROUP_MEMORY_LIMIT_IN_BYTES_FILE "memory.limit_in_bytes"
-#define CGROUP_MEMORY_USAGE_IN_BYTES_FILE "memory.usage_in_bytes"
-#define CGROUP_MEMORY_SWAP_LIMIT_IN_BYTES_FILE "memory.memsw.limit_in_bytes"
-#define CGROUP_MEMORY_SWAP_USAGE_IN_BYTES_FILE "memory.memsw.usage_in_bytes"
+#define CGROUPV1_MEMORY_LIMIT_IN_BYTES_FILE "memory.limit_in_bytes"
+#define CGROUPV1_MEMORY_USAGE_IN_BYTES_FILE "memory.usage_in_bytes"
+#define CGROUPV1_MEMORY_SWAP_LIMIT_IN_BYTES_FILE "memory.memsw.limit_in_bytes"
+#define CGROUPV1_MEMORY_SWAP_USAGE_IN_BYTES_FILE "memory.memsw.usage_in_bytes"
+
+#define CGROUPV2_MEMORY_MAX_FILE "memory.swap.max"
+#define CGROUPV2_MEMORY_CURRENT_FILE "memory.swap.current"
+#define CGROUPV2_MEMORY_SWAP_MAX_FILE "memory.swap.max"
+#define CGROUPV2_MEMORY_SWAP_CURRENT_FILE "memory.swap.current"
+
 #define CGROUP_MEMORY_STAT_FILE "memory.stat"
 
-#define CGROUP_MEMORY_STAT_CACHE "cache"
-#define CGROUP_MEMORY_STAT_CACHE_SZ (sizeof(CGROUP_MEMORY_STAT_CACHE)-1)
+#define CGROUPV1_MEMORY_STAT_CACHE_KEY "cache"
+#define CGROUPV1_MEMORY_STAT_CACHE_KEY_SZ (sizeof(CGROUPV1_MEMORY_STAT_CACHE_KEY)-1)
+
+#define CGROUPV2_MEMORY_STAT_FILE_KEY "file"
+#define CGROUPV2_MEMORY_STAT_FILE_KEY_SZ (sizeof(CGROUPV2_MEMORY_STAT_FILE_KEY)-1)
 
 #if !defined(OMRZTPF)
 /**
@@ -3026,7 +3035,7 @@ _cleanup:
  * @return 0 on success and negative error code on failure.
  */
 static int32_t
-retrieveLinuxCgroupMemoryStats(struct OMRPortLibrary *portLibrary, struct OMRCgroupMemoryInfo *cgroupMemInfo)
+retrieveLinuxCgroupV1MemoryStats(struct OMRPortLibrary *portLibrary, struct OMRCgroupMemoryInfo *cgroupMemInfo)
 {
 	int32_t rc = 0;
 	FILE *memStatFs = NULL;
@@ -3034,25 +3043,19 @@ retrieveLinuxCgroupMemoryStats(struct OMRPortLibrary *portLibrary, struct OMRCgr
 
 	Assert_PRT_true(NULL != cgroupMemInfo);
 
-	cgroupMemInfo->memoryLimit = OMRPORT_MEMINFO_NOT_AVAILABLE;
-	cgroupMemInfo->memoryUsage = OMRPORT_MEMINFO_NOT_AVAILABLE;
-	cgroupMemInfo->memoryAndSwapLimit = OMRPORT_MEMINFO_NOT_AVAILABLE;
-	cgroupMemInfo->memoryAndSwapUsage = OMRPORT_MEMINFO_NOT_AVAILABLE;
-	cgroupMemInfo->cached = OMRPORT_MEMINFO_NOT_AVAILABLE;
-
-	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_MEMORY, CGROUP_MEMORY_LIMIT_IN_BYTES_FILE, numItemsToRead, "%lu", &cgroupMemInfo->memoryLimit);
+	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_MEMORY, CGROUPV1_MEMORY_LIMIT_IN_BYTES_FILE, numItemsToRead, "%lu", &cgroupMemInfo->memoryLimit);
 	if (0 != rc) {
 		goto _exit;
 	}
-	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_MEMORY, CGROUP_MEMORY_USAGE_IN_BYTES_FILE, numItemsToRead, "%lu", &cgroupMemInfo->memoryUsage);
+	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_MEMORY, CGROUPV1_MEMORY_USAGE_IN_BYTES_FILE, numItemsToRead, "%lu", &cgroupMemInfo->memoryUsage);
 	if (0 != rc) {
 		goto _exit;
 	}
-	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_MEMORY, CGROUP_MEMORY_SWAP_LIMIT_IN_BYTES_FILE, numItemsToRead, "%lu", &cgroupMemInfo->memoryAndSwapLimit);
+	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_MEMORY, CGROUPV1_MEMORY_SWAP_LIMIT_IN_BYTES_FILE, numItemsToRead, "%lu", &cgroupMemInfo->memoryAndSwapLimit);
 	if (0 != rc) {
 		if (OMRPORT_ERROR_FILE_NOENT == rc) {
 			/* It is possible file memory.memsw.limit_in_bytes is not present if
-			 * swap space is not configured. In such cases, set memoryAndSwapLimit to same as memoryLimit.
+			 * swap space is not configured. In such cases, set memoryAndSwapLimit to memoryLimit.
 			 */
 			cgroupMemInfo->memoryAndSwapLimit = cgroupMemInfo->memoryLimit;
 			rc = 0;
@@ -3060,7 +3063,7 @@ retrieveLinuxCgroupMemoryStats(struct OMRPortLibrary *portLibrary, struct OMRCgr
 			goto _exit;
 		}
 	}
-	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_MEMORY, CGROUP_MEMORY_SWAP_USAGE_IN_BYTES_FILE, numItemsToRead, "%lu", &cgroupMemInfo->memoryAndSwapUsage);
+	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_MEMORY, CGROUPV1_MEMORY_SWAP_USAGE_IN_BYTES_FILE, numItemsToRead, "%lu", &cgroupMemInfo->memoryAndSwapUsage);
 	if (0 != rc) {
 		if (OMRPORT_ERROR_FILE_NOENT == rc) {
 			/* It is possible file memory.memsw.usage_in_bytes is not present if
@@ -3091,12 +3094,12 @@ retrieveLinuxCgroupMemoryStats(struct OMRPortLibrary *portLibrary, struct OMRCgr
 		tmpPtr = (char *)statEntry;
 
 		/* Extract "cache" value */
-		if (0 == strncmp(tmpPtr, CGROUP_MEMORY_STAT_CACHE, CGROUP_MEMORY_STAT_CACHE_SZ)) {
-			tmpPtr += CGROUP_MEMORY_STAT_CACHE_SZ;
+		if (0 == strncmp(tmpPtr, CGROUPV1_MEMORY_STAT_CACHE_KEY, CGROUPV1_MEMORY_STAT_CACHE_KEY_SZ)) {
+			tmpPtr += CGROUPV1_MEMORY_STAT_CACHE_KEY_SZ;
 			rc = sscanf(tmpPtr, "%" SCNu64, &cgroupMemInfo->cached);
 			if (1 != rc) {
-				Trc_PRT_retrieveLinuxCgroupMemoryStats_invalidValue(CGROUP_MEMORY_STAT_CACHE, CGROUP_MEMORY_STAT_FILE);
-				rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_CGROUP_SUBSYSTEM_FILE_INVALID_VALUE, "invalid value for field %s in file %s", CGROUP_MEMORY_STAT_CACHE, CGROUP_MEMORY_STAT_FILE);
+				Trc_PRT_retrieveLinuxCgroupMemoryStats_invalidValue(CGROUPV1_MEMORY_STAT_CACHE_KEY, CGROUP_MEMORY_STAT_FILE);
+				rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_CGROUP_SUBSYSTEM_FILE_INVALID_VALUE, "invalid value for field %s in file %s", CGROUPV1_MEMORY_STAT_CACHE_KEY, CGROUP_MEMORY_STAT_FILE);
 			} else {
 				/* reset 'rc' to success code */
 				rc = 0;
@@ -3108,6 +3111,137 @@ retrieveLinuxCgroupMemoryStats(struct OMRPortLibrary *portLibrary, struct OMRCgr
 _exit:
 	if (NULL != memStatFs) {
 		fclose(memStatFs);
+	}
+
+	return rc;
+}
+
+/**
+ * Function collects memory usage statistics from the memory subsystem of the process's cgroup.
+ *
+ * @param[in] portLibrary The port library.
+ * @param[in] cgroupMemInfo A pointer to the OMRCgroupMemoryInfo struct which will be populated with memory usage.
+ *
+ * @return 0 on success and negative error code on failure.
+ */
+static int32_t
+retrieveLinuxCgroupV2MemoryStats(struct OMRPortLibrary *portLibrary, struct OMRCgroupMemoryInfo *cgroupMemInfo)
+{
+	int32_t rc = 0;
+	FILE *memStatFs = NULL;
+	int32_t numItemsToRead = 1;
+	uint64_t swapUsage = 0;
+	uint64_t swapLimit = 0;
+
+	Assert_PRT_true(NULL != cgroupMemInfo);
+
+	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_NONE, CGROUPV2_MEMORY_MAX_FILE, numItemsToRead, "%lu", &cgroupMemInfo->memoryLimit);
+	if (0 != rc) {
+		goto _exit;
+	}
+	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_NONE, CGROUPV2_MEMORY_CURRENT_FILE, numItemsToRead, "%lu", &cgroupMemInfo->memoryUsage);
+	if (0 != rc) {
+		goto _exit;
+	}
+	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_NONE, CGROUPV2_MEMORY_SWAP_MAX_FILE, numItemsToRead, "%lu", &swapLimit);
+	if (0 != rc) {
+		if (OMRPORT_ERROR_FILE_NOENT == rc) {
+			/* It is possible file memory.swap.max is not present if
+			 * swap space is not configured. In such cases, set swapLimit to 0.
+			 */
+			swapLimit = 0;
+			rc = 0;
+		} else {
+			goto _exit;
+		}
+	}
+	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_NONE, CGROUPV2_MEMORY_SWAP_CURRENT_FILE, numItemsToRead, "%lu", &swapUsage);
+	if (0 != rc) {
+		if (OMRPORT_ERROR_FILE_NOENT == rc) {
+			/* It is possible file memory.swap.current is not present if
+			 * swap space is not configured. In such cases, set swapUsage to 0.
+			 */
+			swapUsage = 0;
+			rc = 0;
+		} else {
+			goto _exit;
+		}
+	}
+
+	/* Unlike cgroup v1, swap values don't include memory, so we add them ourselves. */
+	cgroupMemInfo->memoryAndSwapLimit = cgroupMemInfo->memoryLimit + swapLimit;
+	cgroupMemInfo->memoryAndSwapUsage = cgroupMemInfo->memoryUsage + swapUsage;
+
+	/* Read value of page cache memory from memory.stat file */
+	rc = getHandleOfCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_NONE, CGROUP_MEMORY_STAT_FILE, &memStatFs);
+	if (0 != rc) {
+		goto _exit;
+	}
+
+	Assert_PRT_true(NULL != memStatFs);
+
+	while (0 == feof(memStatFs)) {
+		char statEntry[MAX_LINE_LENGTH] = {0};
+		char *tmpPtr = NULL;
+
+		if (NULL == fgets((char *)statEntry, MAX_LINE_LENGTH, memStatFs)) {
+			break;
+		}
+		tmpPtr = (char *)statEntry;
+
+		/* TODO: Figure out the right field to read here. */
+		/* Extract "cache" value */
+		if (0 == strncmp(tmpPtr, CGROUPV2_MEMORY_STAT_FILE_KEY, CGROUPV2_MEMORY_STAT_FILE_KEY_SZ)) {
+			tmpPtr += CGROUPV2_MEMORY_STAT_FILE_KEY_SZ;
+			rc = sscanf(tmpPtr, "%" SCNu64, &cgroupMemInfo->cached);
+			if (1 != rc) {
+				Trc_PRT_retrieveLinuxCgroupMemoryStats_invalidValue(CGROUPV2_MEMORY_STAT_FILE_KEY, CGROUP_MEMORY_STAT_FILE);
+				rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_CGROUP_SUBSYSTEM_FILE_INVALID_VALUE, "invalid value for field %s in file %s", CGROUPV2_MEMORY_STAT_FILE_KEY, CGROUP_MEMORY_STAT_FILE);
+			} else {
+				/* reset 'rc' to success code */
+				rc = 0;
+			}
+			break;
+		}
+	}
+
+_exit:
+	if (NULL != memStatFs) {
+		fclose(memStatFs);
+	}
+
+	return rc;
+}
+
+/**
+ * Function collects memory usage statistics from the memory subsystem of the process's cgroup.
+ *
+ * @param[in] portLibrary The port library.
+ * @param[in] cgroupMemInfo A pointer to the OMRCgroupMemoryInfo struct which will be populated with memory usage.
+ *
+ * @return 0 on success and negative error code on failure.
+ */
+static int32_t
+retrieveLinuxCgroupMemoryStats(struct OMRPortLibrary *portLibrary, struct OMRCgroupMemoryInfo *cgroupMemInfo)
+{
+	int32_t rc = 0;
+
+	Assert_PRT_true(NULL != cgroupMemInfo);
+
+	cgroupMemInfo->memoryLimit = OMRPORT_MEMINFO_NOT_AVAILABLE;
+	cgroupMemInfo->memoryUsage = OMRPORT_MEMINFO_NOT_AVAILABLE;
+	cgroupMemInfo->memoryAndSwapLimit = OMRPORT_MEMINFO_NOT_AVAILABLE;
+	cgroupMemInfo->memoryAndSwapUsage = OMRPORT_MEMINFO_NOT_AVAILABLE;
+	cgroupMemInfo->cached = OMRPORT_MEMINFO_NOT_AVAILABLE;
+
+	if (OMR_CGROUP_VERSION_V1 == PPG_cgroupVersion) {
+		rc = retrieveLinuxCgroupV1MemoryStats(portLibrary, cgroupMemInfo);
+	}
+	else if (OMR_CGROUP_VERSION_V2 == PPG_cgroupVersion) {
+		rc = retrieveLinuxCgroupV2MemoryStats(portLibrary, cgroupMemInfo);
+	}
+	else {
+		Assert_PRT_true(FALSE);
 	}
 
 	return rc;
@@ -5382,13 +5516,18 @@ isCgroupAvailable(struct OMRPortLibrary *portLibrary, int32_t *cgroupVersion)
 	struct statfs buf = {0};
 	int32_t rc = 0;
 	BOOLEAN result = TRUE;
+	const char *mountpoint = getenv("OMR_CGROUP_MOUNT_POINT");
+
+	if (!mountpoint) {
+		mountpoint = OMR_CGROUP_DEFAULT_MOUNT_POINT;
+	}
 
 	/* If tmpfs is mounted on /sys/fs/cgroup, then it indicates cgroup v1 system is available.
 	 * If cgroup2 is mounted, we have cgroup v2 available. */
-	rc = statfs(OMR_CGROUP_DEFAULT_MOUNT_POINT, &buf);
+	rc = statfs(mountpoint, &buf);
 	if (0 != rc) {
 		int32_t osErrCode = errno;
-		Trc_PRT_isCgroupAvailable_statfs_failed(OMR_CGROUP_DEFAULT_MOUNT_POINT, osErrCode);
+		Trc_PRT_isCgroupAvailable_statfs_failed(mountpoint, osErrCode);
 		portLibrary->error_set_last_error(portLibrary, osErrCode, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_STATFS_FAILED);
 		result = FALSE;
 	} else if (TMPFS_MAGIC == buf.f_type) {
@@ -5403,8 +5542,8 @@ isCgroupAvailable(struct OMRPortLibrary *portLibrary, int32_t *cgroupVersion)
 		if (NULL != cgroupVersion) {
 			*cgroupVersion = OMR_CGROUP_VERSION_UNKNOWN;
 		}
-		Trc_PRT_isCgroupAvailable_fs_not_mounted(OMR_CGROUP_DEFAULT_MOUNT_POINT);
-		portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_KNOWN_FS_NOT_MOUNTED, "known filesystem is not mounted on " OMR_CGROUP_DEFAULT_MOUNT_POINT);
+		Trc_PRT_isCgroupAvailable_fs_not_mounted(mountpoint);
+		portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_SYS_FS_CGROUP_KNOWN_FS_NOT_MOUNTED, "known filesystem is not mounted on %s", mountpoint);
 		result = FALSE;
 	}
 
@@ -5562,6 +5701,7 @@ readCgroupFile(struct OMRPortLibrary *portLibrary, int pid, BOOLEAN inContainer,
 		char subsystems[PATH_MAX];
 		char *cursor = NULL;
 		char *separator = NULL;
+		char separatorChar = ',';
 		int32_t hierId = -1;
 
 		if (NULL == fgets(buffer, PATH_MAX, cgroupFile)) {
@@ -5585,8 +5725,28 @@ readCgroupFile(struct OMRPortLibrary *portLibrary, int pid, BOOLEAN inContainer,
 				rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_PROCESS_CGROUP_FILE_READ_FAILED, "unexpected format of %s", cgroupFilePath);
 				goto _end;
 			}
+
+			/* This is a cgroup v2 entry; if we're using v2 we need to read the subsystems (called controllers in v2) from
+			 * a file in the process' cgroup directory.
+			 * If we're not using v2, ignore the entry.
+			 */
+			if (OMR_CGROUP_VERSION_V2 == PPG_cgroupVersion) {
+				rc = addCgroupEntry(portLibrary, &cgEntryList, hierId, "", cgroup, OMR_CGROUP_SUBSYSTEM_NONE);
+				if (0 != rc) {
+					goto _end;
+				}
+				// XXX
+				*cgroupEntryList = cgEntryList;
+				readCgroupMetricFromFile(portLibrary, OMR_CGROUP_SUBSYSTEM_NONE, "cgroup.controllers", NULL, NULL, subsystems);
+				separatorChar = ' ';
+			}
 			subsystems[0] = '\0';
-		} else if (3 != rc) {
+		} else if (3 == rc) {
+			/* This is a cgroup v1 entry; if we're not using v1 we should ignore this entry, otherwise parse the subsystems. */
+			if (OMR_CGROUP_VERSION_V1 != PPG_cgroupVersion) {
+				subsystems[0] = '\0';
+			}
+		} else {
 			Trc_PRT_readCgroupFile_unexpected_format(cgroupFilePath);
 			rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_PROCESS_CGROUP_FILE_READ_FAILED, "unexpected format of %s", cgroupFilePath);
 			goto _end;
@@ -5596,7 +5756,7 @@ readCgroupFile(struct OMRPortLibrary *portLibrary, int pid, BOOLEAN inContainer,
 		do {
 			int32_t i = 0;
 
-			separator = strchr(cursor, ',');
+			separator = strchr(cursor, separatorChar);
 			if (NULL != separator) {
 				*separator = '\0';
 			}
@@ -5667,6 +5827,39 @@ getCgroupSubsystemFromFlag(uint64_t subsystemFlag)
 	return INVALID_SUBSYSTEM;
 }
 
+static int32_t
+getAbsolutePathOfCgroupV2File(struct OMRPortLibrary *portLibrary, const char *fileName, char *fullPath, intptr_t *bufferLength)
+{
+	intptr_t fullPathLen = 0;
+	int32_t rc = 0;
+	const char *mountpoint = getenv("OMR_CGROUP_MOUNT_POINT");
+
+	if (!mountpoint) {
+		mountpoint = OMR_CGROUP_DEFAULT_MOUNT_POINT;
+	}
+
+	if (NULL == PPG_cgroupEntryList || NULL == PPG_cgroupEntryList->cgroup) {
+		/* If the subsystem is available and supported, cgroup must not be NULL */
+		//Trc_PRT_readCgroupSubsystemFile_missing_cgroup(subsystemFlag);
+		//rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_CGROUP_NAME_NOT_AVAILABLE, "cgroup name for subsystem %s is not available", subsystemNames[MEMORY]);
+		Trc_PRT_Assert_ShouldNeverHappen();
+		goto _end;
+	}
+
+	/* absolute path of the file to be read is: /sys/fs/cgroup/cgroup/filenName */
+	fullPathLen = portLibrary->str_printf(portLibrary, NULL, (uint32_t)-1, "%s/%s/%s", mountpoint, PPG_cgroupEntryList->cgroup, fileName);
+	if (fullPathLen > *bufferLength) {
+		*bufferLength = fullPathLen;
+		rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_STRING_BUFFER_TOO_SMALL, "buffer size should be %d bytes", fullPathLen);
+		goto _end;
+	}
+
+	portLibrary->str_printf(portLibrary, fullPath, fullPathLen, "%s/%s/%s", mountpoint, PPG_cgroupEntryList->cgroup, fileName);
+
+_end:
+	return rc;
+}
+
 /**
  * Returns Absolute Path for the specified file in the cgroup subsystem.
  *
@@ -5681,39 +5874,50 @@ getCgroupSubsystemFromFlag(uint64_t subsystemFlag)
 static int32_t
 getAbsolutePathOfCgroupSubsystemFile(struct OMRPortLibrary *portLibrary, uint64_t subsystemFlag, const char *fileName, char *fullPath, intptr_t *bufferLength)
 {
-	char *cgroup = NULL;
-	intptr_t fullPathLen = 0;
-	int32_t rc = 0;
-	OMRCgroupSubsystem subsystem = getCgroupSubsystemFromFlag(subsystemFlag);
-	uint64_t availableSubsystem = portLibrary->sysinfo_cgroup_are_subsystems_available(portLibrary, subsystemFlag);
-
-	if (availableSubsystem != subsystemFlag) {
-		Trc_PRT_readCgroupSubsystemFile_subsystem_not_available(subsystemFlag);
-		rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_CGROUP_SUBSYSTEM_UNAVAILABLE, "cgroup subsystem %s is not available", subsystemNames[subsystem]);
-		goto _end;
+	if (OMR_CGROUP_SUBSYSTEM_NONE == subsystemFlag) {
+		Assert_PRT_true(OMR_CGROUP_VERSION_V2 == PPG_cgroupVersion);
+		return getAbsolutePathOfCgroupV2File(portLibrary, fileName, fullPath, bufferLength);
 	}
+	else {
+		char *cgroup = NULL;
+		intptr_t fullPathLen = 0;
+		int32_t rc = 0;
+		OMRCgroupSubsystem subsystem = getCgroupSubsystemFromFlag(subsystemFlag);
+		uint64_t availableSubsystem = portLibrary->sysinfo_cgroup_are_subsystems_available(portLibrary, subsystemFlag);
+		const char *mountpoint = getenv("OMR_CGROUP_MOUNT_POINT");
 
-	cgroup = getCgroupNameForSubsystem(portLibrary, PPG_cgroupEntryList, subsystemNames[subsystem]);
-	if (NULL == cgroup) {
-		/* If the subsystem is available and supported, cgroup must not be NULL */
-		Trc_PRT_readCgroupSubsystemFile_missing_cgroup(subsystemFlag);
-		rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_CGROUP_NAME_NOT_AVAILABLE, "cgroup name for subsystem %s is not available", subsystemNames[MEMORY]);
-		Trc_PRT_Assert_ShouldNeverHappen();
-		goto _end;
+		if (!mountpoint) {
+			mountpoint = OMR_CGROUP_DEFAULT_MOUNT_POINT;
+		}
+
+		if (availableSubsystem != subsystemFlag) {
+			Trc_PRT_readCgroupSubsystemFile_subsystem_not_available(subsystemFlag);
+			rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_CGROUP_SUBSYSTEM_UNAVAILABLE, "cgroup subsystem %s is not available", subsystemNames[subsystem]);
+			goto _end;
+		}
+
+		cgroup = getCgroupNameForSubsystem(portLibrary, PPG_cgroupEntryList, subsystemNames[subsystem]);
+		if (NULL == cgroup) {
+			/* If the subsystem is available and supported, cgroup must not be NULL */
+			Trc_PRT_readCgroupSubsystemFile_missing_cgroup(subsystemFlag);
+			rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_CGROUP_NAME_NOT_AVAILABLE, "cgroup name for subsystem %s is not available", subsystemNames[MEMORY]);
+			Trc_PRT_Assert_ShouldNeverHappen();
+			goto _end;
+		}
+
+		/* absolute path of the file to be read is: /sys/fs/cgroup/subsystemNames[subsystem]/cgroup/filenName */
+		fullPathLen = portLibrary->str_printf(portLibrary, NULL, (uint32_t)-1, "%s/%s/%s/%s", mountpoint, subsystemNames[subsystem], cgroup, fileName);
+		if (fullPathLen > *bufferLength) {
+			*bufferLength = fullPathLen;
+			rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_STRING_BUFFER_TOO_SMALL, "buffer size should be %d bytes", fullPathLen);
+			goto _end;
+		}
+
+		portLibrary->str_printf(portLibrary, fullPath, fullPathLen, "%s/%s/%s/%s", mountpoint, subsystemNames[subsystem], cgroup, fileName);
+
+	_end:
+		return rc;
 	}
-
-	/* absolute path of the file to be read is: /sys/fs/cgroup/subsystemNames[subsystem]/cgroup/filenName */
-	fullPathLen = portLibrary->str_printf(portLibrary, NULL, (uint32_t)-1, "%s/%s/%s/%s", OMR_CGROUP_DEFAULT_MOUNT_POINT, subsystemNames[subsystem], cgroup, fileName);
-	if (fullPathLen > *bufferLength) {
-		*bufferLength = fullPathLen;
-		rc = portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_STRING_BUFFER_TOO_SMALL, "buffer size should be %d bytes", fullPathLen);
-		goto _end;
-	}
-
-	portLibrary->str_printf(portLibrary, fullPath, fullPathLen, "%s/%s/%s/%s", OMR_CGROUP_DEFAULT_MOUNT_POINT, subsystemNames[subsystem], cgroup, fileName);
-
-_end:
-	return rc;
 }
 
 /**
