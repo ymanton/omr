@@ -6157,19 +6157,30 @@ getCgroupMemoryLimit(struct OMRPortLibrary *portLibrary, uint64_t *limit)
 {
 	uint64_t cgroupMemLimit = 0;
 	uint64_t physicalMemLimit = 0;
+	uint64_t subsystemFlag = OMR_CGROUP_SUBSYSTEM_NONE;
+	const char *cgroupFileName = NULL;
 	int32_t numItemsToRead = 1; /* memory.limit_in_bytes file contains only one integer value */
 	int32_t rc = 0;
 
 	Trc_PRT_sysinfo_cgroup_get_memlimit_Entry();
 
-	rc = readCgroupSubsystemFile(portLibrary, OMR_CGROUP_SUBSYSTEM_MEMORY, "memory.limit_in_bytes", numItemsToRead, "%" SCNu64, &cgroupMemLimit);
+	if (OMR_CGROUP_VERSION_V1 == PPG_cgroupVersion) {
+		subsystemFlag = OMR_CGROUP_SUBSYSTEM_MEMORY;
+		cgroupFileName = CGROUPV1_MEMORY_LIMIT_IN_BYTES_FILE;
+	}
+	else if (OMR_CGROUP_VERSION_V2 == PPG_cgroupVersion) {
+		subsystemFlag = OMR_CGROUP_SUBSYSTEM_NONE;
+		cgroupFileName = CGROUPV2_MEMORY_MAX_FILE;
+	}
+
+	rc = readCgroupSubsystemFile(portLibrary, subsystemFlag, cgroupFileName, numItemsToRead, "%" SCNu64, &cgroupMemLimit);
 	if (0 != rc) {
-		Trc_PRT_sysinfo_cgroup_get_memlimit_memory_limit_read_failed("memory.limit_in_bytes", rc);
+		Trc_PRT_sysinfo_cgroup_get_memlimit_memory_limit_read_failed(cgroupFileName, rc);
 		goto _end;
 	}
 
 	physicalMemLimit = getPhysicalMemory(portLibrary);
-	/* If the cgroup is not imposing any memory limit then the value in memory.limit_in_bytes
+	/* If the cgroup is not imposing any memory limit then the value in memory.{limit_in_bytes/max}
 	 * is close to max value of 64-bit integer, and is more than the physical memory in the system.
 	 */
 	if (cgroupMemLimit > physicalMemLimit) {
