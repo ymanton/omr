@@ -3012,8 +3012,8 @@ _cleanup:
 #define CGROUPV1_MEMORY_SWAP_LIMIT_IN_BYTES_FILE "memory.memsw.limit_in_bytes"
 #define CGROUPV1_MEMORY_SWAP_USAGE_IN_BYTES_FILE "memory.memsw.usage_in_bytes"
 
-#define CGROUPV2_MEMORY_MAX_FILE "memory.swap.max"
-#define CGROUPV2_MEMORY_CURRENT_FILE "memory.swap.current"
+#define CGROUPV2_MEMORY_MAX_FILE "memory.max"
+#define CGROUPV2_MEMORY_CURRENT_FILE "memory.current"
 #define CGROUPV2_MEMORY_SWAP_MAX_FILE "memory.swap.max"
 #define CGROUPV2_MEMORY_SWAP_CURRENT_FILE "memory.swap.current"
 
