@@ -5740,7 +5740,9 @@ readCgroupFile(struct OMRPortLibrary *portLibrary, int pid, BOOLEAN inContainer,
 				readCgroupMetricFromFile(portLibrary, OMR_CGROUP_SUBSYSTEM_NONE, "cgroup.controllers", NULL, NULL, subsystems);
 				separatorChar = ' ';
 			}
+			else {
 			subsystems[0] = '\0';
+			}
 		} else if (3 == rc) {
 			/* This is a cgroup v1 entry; if we're not using v1 we should ignore this entry, otherwise parse the subsystems. */
 			if (OMR_CGROUP_VERSION_V1 != PPG_cgroupVersion) {
