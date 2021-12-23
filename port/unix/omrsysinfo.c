@@ -5877,7 +5877,11 @@ static int32_t
 getAbsolutePathOfCgroupSubsystemFile(struct OMRPortLibrary *portLibrary, uint64_t subsystemFlag, const char *fileName, char *fullPath, intptr_t *bufferLength)
 {
 	if (OMR_CGROUP_SUBSYSTEM_NONE == subsystemFlag) {
-		Assert_PRT_true(OMR_CGROUP_VERSION_V2 == PPG_cgroupVersion);
+		if (OMR_CGROUP_VERSION_V2 != PPG_cgroupVersion) {
+			// XXX: Wrong error messages here
+			Trc_PRT_readCgroupSubsystemFile_subsystem_not_available(subsystemFlag);
+			return portLibrary->error_set_last_error_with_message_format(portLibrary, OMRPORT_ERROR_SYSINFO_CGROUP_SUBSYSTEM_UNAVAILABLE, "cgroup system is not available");
+		}
 		return getAbsolutePathOfCgroupV2File(portLibrary, fileName, fullPath, bufferLength);
 	}
 	else {
