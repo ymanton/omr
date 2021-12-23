@@ -5741,7 +5741,7 @@ readCgroupFile(struct OMRPortLibrary *portLibrary, int pid, BOOLEAN inContainer,
 				separatorChar = ' ';
 			}
 			else {
-			subsystems[0] = '\0';
+				subsystems[0] = '\0';
 			}
 		} else if (3 == rc) {
 			/* This is a cgroup v1 entry; if we're not using v1 we should ignore this entry, otherwise parse the subsystems. */
