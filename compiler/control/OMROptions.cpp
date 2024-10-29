@@ -542,6 +542,7 @@ TR::OptionTable OMR::Options::_jitOptions[] = {
 #endif
    {"disableShareableMethodHandleThunks",  "R\tdisable creation of shareable invokeExact thunks for MethodHandles", SET_OPTION_BIT(TR_DisableShareableMethodHandleThunks), "F", NOT_IN_SUBSET},
    {"disableSharedCacheHints",             "R\tdisable storing and loading hints from shared cache", SET_OPTION_BIT(TR_DisableSharedCacheHints), "F"},
+   {"disableSharedCacheDisclaiming",       "M\tdisable memory disclaiming for shared class cache memory segments (linux specific).", SET_OPTION_BIT(TR_DisableSharedCacheDisclaiming),"F", NOT_IN_SUBSET},
    {"disableSIMD",                         "O\tdisable SIMD exploitation and infrastructure on platforms supporting vector register and instructions", SET_OPTION_BIT(TR_DisableSIMD), "F"},
    {"disableSIMDArrayCompare",            "O\tDisable vectorized array comparison using SIMD instruction", SET_OPTION_BIT(TR_DisableSIMDArrayCompare), "F"},
    {"disableSIMDArrayCopy",                "O\tDisable vectorized array copying using SIMD instruction", SET_OPTION_BIT(TR_DisableSIMDArrayCopy), "F"},
