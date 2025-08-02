@@ -3952,7 +3952,13 @@ static void arraySetXMM(TR::Node* node, uint8_t elementSize, TR::Register* addre
    // by setting some bytes multiple times, on the assumption
    // that stores to overlapping memory ranges are cheaper than executing
    // extra comparisons and branches to set each byte exactly once.
+   TR::LabelSymbol *startLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *doneLabel = generateLabelSymbol(cg);
+
+   startLabel->setStartInternalControlFlow();
+   doneLabel->setEndInternalControlFlow();
+
+   generateLabelInstruction(TR::InstOpCode::label, node, startLabel, cg);
 
    TR::Register *scratch1Reg = cg->allocateRegister(TR_GPR);
    TR::Register *scratch2Reg = cg->allocateRegister(TR_GPR);
