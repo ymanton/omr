@@ -460,6 +460,8 @@ void TR_InlinerBase::performInlining(TR::ResolvedMethodSymbol *callerSymbol)
 
     cleanup(callerSymbol, inlinedSite);
 
+    comp()->setPostInliningNodeCount();
+
     if (debug("dumpInitialTrees") || comp()->getOption(TR_TraceTrees))
         comp()->dumpMethodTrees(comp()->log(), "Post Inlining Trees");
 }
