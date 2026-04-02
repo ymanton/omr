@@ -233,6 +233,7 @@ OMR::Compilation::Compilation(int32_t id, OMR_VMThread *omrVMThread, TR_FrontEnd
     , _nodeCount(0)
     , _accurateNodeCount(0)
     , _lastValidNodeCount(0)
+    , _postInliningNodeCount(0)
     , _maxInlineDepth(0)
     , _numLivePendingPushSlots(0)
     , _numNestingLevels(0)

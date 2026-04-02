@@ -215,6 +215,9 @@ int32_t TR_TrivialInliner::perform()
         inliner.performInlining(sym);
     }
 
+    // Always set post-inlining node count, even if no inlining occurred
+    comp()->setPostInliningNodeCount();
+
     return 1; // cost??
 }
 

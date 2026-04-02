@@ -57,6 +57,9 @@ int32_t TR::BenefitInlinerWrapper::perform()
         inliner.performInlining(comp()->getMethodSymbol());
     }
 
+    // Always set post-inlining node count, even if no inlining occurred
+    comp()->setPostInliningNodeCount();
+
     return 1;
 }
 

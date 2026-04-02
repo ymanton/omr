@@ -1058,6 +1058,8 @@ public:
     ncount_t getNodeCount();
     ncount_t generateAccurateNodeCount();
     ncount_t getAccurateNodeCount();
+    void setPostInliningNodeCount() { _postInliningNodeCount = getAccurateNodeCount(); }
+    ncount_t getPostInliningNodeCount() { return _postInliningNodeCount; }
 
     PhaseTimingSummary &phaseTimer() { return _phaseTimer; }
 
@@ -1486,6 +1488,7 @@ private:
     ncount_t _accurateNodeCount; // this number is the current number of nodes in the trees. it can go stale
     ncount_t _lastValidNodeCount; // set to _nodeCount when _accurateNumberOfNodes is set. Used to tell how many nodes
                                   // have been created since
+    ncount_t _postInliningNodeCount;
 
     uint16_t _maxInlineDepth;
     int32_t _numLivePendingPushSlots;
