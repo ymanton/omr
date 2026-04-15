@@ -40,6 +40,7 @@
 #include <time.h>
 #include "windows_api.h"
 #else
+#include <time.h>
 #include <sys/time.h>
 #endif /* defined(OMR_OS_WINDOWS) */
 
@@ -101,16 +102,19 @@ class BSDTimer {
 public:
     uint64_t Read() const
     {
-        uint64_t start = fStart.tv_usec + uint64_t(fStart.tv_sec) * 1000000;
-        uint64_t stop = fStop.tv_usec + uint64_t(fStop.tv_sec) * 1000000;
+        uint64_t start = fStart.tv_nsec + uint64_t(fStart.tv_sec) * 1000000000;
+        uint64_t stop = fStop.tv_nsec + uint64_t(fStop.tv_sec) * 1000000000;
+        // Convert nanoseconds to microseconds
+        //uint64_t start = (fStart.tv_nsec / 1000) + uint64_t(fStart.tv_sec) * 1000000;
+        //uint64_t stop = (fStop.tv_nsec / 1000) + uint64_t(fStop.tv_sec) * 1000000;
         if (stop <= start)
             return 0;
         return stop - start;
     }
 
-    void Start() { gettimeofday(&fStart, NULL); }
+    void Start() { clock_gettime(CLOCK_THREAD_CPUTIME_ID, &fStart); }
 
-    void Stop() { gettimeofday(&fStop, NULL); }
+    void Stop() { clock_gettime(CLOCK_THREAD_CPUTIME_ID, &fStop); }
 
     void Reset()
     {
@@ -118,9 +122,9 @@ public:
         memset(&fStop, 0, sizeof(fStop));
     }
 
-private:
-    struct timeval fStart;
-    struct timeval fStop;
+private:                                                                             
+    struct timespec fStart;  // Changed from timeval to timespec
+    struct timespec fStop;   // Changed from timeval to timespec
 };
 
 typedef BSDTimer PlatformTimer;
