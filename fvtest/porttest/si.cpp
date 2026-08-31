@@ -3264,8 +3264,45 @@ TEST(PortSysinfoTest, sysinfo_test_get_all_diskstats_basic)
 
 	portTestEnv->log("omrsysinfo_get_all_diskstats(): found %zu disk entries\n", numEntries);
 
-	/* Spot-check every entry: Linux major device numbers are in [1, 259]; 0 is
-	 * reserved and should not appear in /proc/diskstats. */
+	/* Determine the highest block device major number registered on this kernel
+	 * by reading /proc/devices, so the check stays valid as new major numbers
+	 * are allocated in future kernel releases.
+	 */
+	uint32_t maxMajorNum = 0;
+	FILE *devfp = fopen("/proc/devices", "r");
+
+#define J9SYSINFO_PROC_DEVICES_LINE_LENGTH 128
+
+	if (NULL != devfp) {
+		char devline[J9SYSINFO_PROC_DEVICES_LINE_LENGTH];
+		BOOLEAN inBlockSection = FALSE;
+		while (NULL != fgets(devline, sizeof(devline), devfp)) {
+			if (0 == strncmp(devline, "Block devices:", 14)) {
+				inBlockSection = TRUE;
+				continue;
+			}
+			if (inBlockSection) {
+				uint32_t maj = 0;
+				if (1 == sscanf(devline, " %u ", &maj)) {
+					if (maj > maxMajorNum) {
+						maxMajorNum = maj;
+					}
+				}
+			}
+		}
+		fclose(devfp);
+	}
+	if (0 == maxMajorNum) {
+		/* /proc/devices unreadable or empty — fall back to the theoretical
+		 * kernel maximum: major numbers are 12 bits wide (MINORBITS=20).
+		 */
+		maxMajorNum = (1U << 12) - 1;
+	}
+	portTestEnv->log("omrsysinfo_get_all_diskstats(): highest registered block major=%u\n", maxMajorNum);
+
+	/* Spot-check every entry: major 0 is reserved and should not appear in
+	 * /proc/diskstats; upper bound is determined dynamically above.
+	 */
 	for (uintptr_t i = 0; i < numEntries; i++) {
 		portTestEnv->log(
 			LEVEL_VERBOSE,
@@ -3275,11 +3312,11 @@ TEST(PortSysinfoTest, sysinfo_test_get_all_diskstats_basic)
 			entries[i].minorNum,
 			(unsigned long long)entries[i].stats.rdIos,
 			(unsigned long long)entries[i].stats.wrIos);
-		if (entries[i].majorNum > 259) {
+		if ((0 == entries[i].majorNum) || (entries[i].majorNum > maxMajorNum)) {
 			outputErrorMessage(
 				PORTTEST_ERROR_ARGS,
-				"entry[%zu] has unexpected majorNum=%u (expected 1-259)\n",
-				i, entries[i].majorNum);
+				"entry[%zu] has unexpected majorNum=%u (expected 1-%u)\n",
+				i, entries[i].majorNum, maxMajorNum);
 		}
 	}
 
@@ -3328,10 +3365,14 @@ TEST(PortSysinfoTest, sysinfo_test_get_all_diskstats_count_matches_proc)
 
 	uintptr_t lineCount = 0;
 	char line[J9SYSINFO_DISKSTATS_LINE_LENGTH];
+
+#define PROC_DISKSTATS_EXPECTED_NUMBER_OF_FIELDS 13
+
 	while (NULL != fgets(line, sizeof(line), fp)) {
 		uint32_t maj = 0;
 		uint32_t min = 0;
-		uint64_t f[11];
+		/* Storage for remaining fields */
+		uint64_t f[PROC_DISKSTATS_EXPECTED_NUMBER_OF_FIELDS - 2];
 		int matched = sscanf(
 			line,
 			"%" SCNu32 " %" SCNu32 " %*s"
@@ -3342,8 +3383,6 @@ TEST(PortSysinfoTest, sysinfo_test_get_all_diskstats_count_matches_proc)
 			&f[0], &f[1], &f[2], &f[3],
 			&f[4], &f[5], &f[6], &f[7],
 			&f[8], &f[9], &f[10]);
-
-#define PROC_DISKSTATS_EXPECTED_NUMBER_OF_FIELDS 13
 
 		if (PROC_DISKSTATS_EXPECTED_NUMBER_OF_FIELDS == matched) {
 			lineCount += 1;
